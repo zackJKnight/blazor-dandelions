@@ -1,9 +1,238 @@
 ﻿@page "/"
+@using SkiaSharp
+@using SkiaSharp.Views.Blazor
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Dandelions</PageTitle>
+<Container>
+    <br />
+    <div class="border rounded p-2 canvas-container" @ref="testRef" tabindex="0" @onkeydown="HandleKeyDown">
+        <SKGLView OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="true" />
+    </div>
+    <br />
+    <Row>
+        <Column>
+            <NumericPicker @bind-Value="@numberOfDandies" Min="1" Max="500" Step="10" />
+        </Column>
+        <Column>
+            <Text>@totalPoints</Text>
+        </Column>
+        <Column>
+            <Button Border="Border.Is1" Clicked="@OnClear">Clear </Button>
+        </Column>
+    </Row>
+    <br />
+    <Text>Points</Text>
+    <Slider @bind-Value="@numberOfPoints" Min="1" Max="500" Step="10" />
+    <Text>Scale</Text>
+    <Slider TValue="float" @bind-Value="@pointScale" Min="26" Max="100" Step="2" />
+    <Text>Speed</Text>
+    <Slider @bind-Value="@moveSpeed" Min="0" Max="25" Step="1" />
+</Container>
 
-<h1>Hello, world!</h1>
+@code
+{
+    string totalPoints = "";
+    int tickIndex = 0;
+    long tickSum = 0;
+    long[] tickList = new long[100];
+    long lastTick = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    double GoldenRatio = 1.61803398874989484820458683436;
+    int numberOfPoints = 20;
+    int numberOfDandies = 1;
+    int alpha = 0;
+    Random random = new Random();
+    bool moveUp = true;
+    bool moveRight = true;
+    int moveSpeed = 1;
+    float pointScale = 30.0f;
+    float hCenter;
+    float vCenter;
+    List<float[]> points = new List<float[]>();
+    List<Dandelion> dandelions = new List<Dandelion>();
 
-Welcome to your new app.
+    void OnClear()
+    {
+        numberOfDandies = 0;
+        OnNumberOfDandiesChanged(0);
+    }
+    void OnNumberOfDandiesChanged(int newDandyCount)
+    {
+        totalPoints = $"Total: {numberOfPoints * newDandyCount}";
+        if (dandelions.Count() < newDandyCount)
+        {
+            AddDandies((int)(newDandyCount - dandelions.Count()));
+        }
+        else if (dandelions.Count() > newDandyCount)
+        {
+            dandelions.RemoveRange((int)newDandyCount, (int)(dandelions.Count() - newDandyCount));
+        }
+    }
+    void AddDandies(int numberToAdd)
+    {
+        for (float i = 0; i < numberToAdd; i++)
+        {
 
-<SurveyPrompt Title="How is Blazor working for you?" />
+            dandelions.Add(new Dandelion()
+            {
+                moveX = random.Next(-75, 75),
+                moveY = random.Next(-75, 75),
+                moveSpeed = moveSpeed,
+                moveRight = moveRight,
+                moveUp = moveUp
+            });
+        }
+    }
+
+    void OnPaintSurface(SKPaintGLSurfaceEventArgs e)
+    {
+        totalPoints = $"Total: {numberOfPoints * numberOfDandies}";
+        if (!dandelions.Any())
+        {
+            AddDandies(numberOfDandies);
+        }
+
+        OnNumberOfDandiesChanged(numberOfDandies);
+        var fps = GetCurrentFPS();
+        // the the canvas and properties
+        SKCanvas canvas = e.Surface.Canvas;
+        var surfaceSize = e.Info.Size;
+
+        hCenter = (surfaceSize.Width / 2f);
+        vCenter = (surfaceSize.Height / 2f);
+
+        var now = DateTime.Now;
+
+        // make sure the canvas is blank
+        canvas.Clear(SKColors.White);
+        using var textPaint = new SKPaint
+        {
+            IsAntialias = true,
+            StrokeWidth = 5f,
+            StrokeCap = SKStrokeCap.Round,
+            TextAlign = SKTextAlign.Center,
+            TextSize = 24,
+            Style = SKPaintStyle.Fill,
+            Color = SKColors.Red
+        };
+        // draw the fps counter
+
+        canvas.DrawText($"{fps:0.00}", hCenter, surfaceSize.Height - 10f, textPaint);
+        // background
+        using var paint = new SKPaint
+        {
+            IsAntialias = true,
+            StrokeWidth = 3f,
+            StrokeCap = SKStrokeCap.Round,
+            TextAlign = SKTextAlign.Center,
+            TextSize = 24,
+            Style = SKPaintStyle.Fill,
+
+        };
+
+        // Region
+        paint.Style = SKPaintStyle.Stroke;
+        points.Clear();
+        FillCircleWithPoints(numberOfPoints, alpha);
+        for (float i = 0; i < numberOfDandies; i++)
+        {
+            var dandy = dandelions.ElementAt((int)i);
+            dandy.moveSpeed = moveSpeed > 0 ? moveSpeed + (int)i : moveSpeed;
+            // higher the x and y, the more right and down
+            dandy.Update(hCenter, vCenter, pointScale);
+            dandy.points.Clear();
+
+            points.ToList().ForEach(point =>
+            dandy.points.Add(new SKPoint((point[0] * pointScale) + hCenter + dandy.moveX,
+            (point[1] * pointScale) + vCenter + dandy.moveY)));
+
+        }
+
+        dandelions.ForEach((dandy) =>
+        {
+            canvas.DrawPoints(
+            SKPointMode.Points,
+            dandy.points.ToArray(),
+            paint);
+        });
+
+        paint.Style = SKPaintStyle.Fill;
+
+    }
+
+    double GetCurrentFPS()
+    {
+        var newTick = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var delta = newTick - lastTick;
+        lastTick = newTick;
+
+        tickSum -= tickList[tickIndex];
+        tickSum += delta;
+        tickList[tickIndex] = delta;
+
+        if (++tickIndex == tickList.Length)
+        {
+            tickIndex = 0;
+        }
+
+        return 1000.0 / ((double)tickSum / tickList.Length);
+    }
+
+    double GetRadius(int k, int n, double b)
+    {
+        double r = 0.0;
+
+        if (k > (n - b))
+        {
+            r = 1.0;
+        }
+        else
+        {
+            r = Math.Sqrt(k - 1 / 2) / Math.Sqrt(n - (b + 1) / 2);
+        }
+
+        return r;
+    }
+
+    void FillCircleWithPoints(int n, int alpha)
+    {
+        double boundaryPointCount = Math.Round(alpha * Math.Sqrt(n)); // % number of boundary points
+        for (int k = 1; k < n; k++)
+        {
+            double r = GetRadius(k, n, boundaryPointCount);
+            var theta = 2 * Math.PI * k / Math.Pow(GoldenRatio, 2);
+
+            float x = (float)(r * Math.Cos(theta));
+            float y = (float)(r * Math.Sin(theta));
+            points.Add(new[] { x, y });
+        }
+
+    }
+
+    private ElementReference testRef;
+    private string? pressedKey;
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        pressedKey = e.Key;
+
+        if (pressedKey == "ArrowRight")
+        {
+            numberOfDandies = numberOfDandies + 1;
+        }
+        if (pressedKey == "ArrowLeft")
+        {
+            if (numberOfDandies > 0)
+            {
+                numberOfDandies = numberOfDandies - 1;
+            }
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await testRef.FocusAsync();
+        }
+    }
+}
