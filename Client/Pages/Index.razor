@@ -101,8 +101,8 @@
             dandelions.Add(new Dandelion()
             {
                 color = colors.ElementAt(random.Next(colors.Count())),
-                moveX = random.Next(-75, 75),
-                moveY = random.Next(-75, 75),
+                moveX = random.Next(-((int)hCenter), ((int)hCenter)),
+                moveY = random.Next(-((int)vCenter), ((int)vCenter)),
                 moveSpeed = moveSpeed,
                 moveRight = random.NextDouble() >= 0.5,
                 moveUp = random.NextDouble() >= 0.5
@@ -113,6 +113,12 @@
     void OnPaintSurface(SKPaintGLSurfaceEventArgs e)
     {
         totalPoints = $"Total: {numberOfPoints * numberOfDandies}";
+                // the the canvas and properties
+        SKCanvas canvas = e.Surface.Canvas;
+        var surfaceSize = e.Info.Size;
+
+        hCenter = (surfaceSize.Width / 2f);
+        vCenter = (surfaceSize.Height / 2f);
         if (!dandelions.Any())
         {
             AddDandies(numberOfDandies);
@@ -120,12 +126,6 @@
 
         OnNumberOfDandiesChanged(numberOfDandies);
         var fps = GetCurrentFPS();
-        // the the canvas and properties
-        SKCanvas canvas = e.Surface.Canvas;
-        var surfaceSize = e.Info.Size;
-
-        hCenter = (surfaceSize.Width / 2f);
-        vCenter = (surfaceSize.Height / 2f);
 
         var now = DateTime.Now;
 
@@ -134,10 +134,10 @@
         using var textPaint = new SKPaint
         {
             IsAntialias = true,
-            StrokeWidth = 5f,
+            StrokeWidth = 6f,
             StrokeCap = SKStrokeCap.Round,
             TextAlign = SKTextAlign.Center,
-            TextSize = 24,
+            TextSize = 32,
             Style = SKPaintStyle.Fill,
             Color = SKColors.Red
         };
