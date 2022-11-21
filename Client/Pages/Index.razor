@@ -8,7 +8,7 @@
         </div>
     <br />
     <Field Horizontal="true" Size="Size.ExtraLarge">
-        <FieldLabel ColumnSize="ColumnSize.Is1" Size="Size.ExtraLarge">
+        <FieldLabel ColumnSize="ColumnSize.Is2" Size="Size.ExtraLarge">
             Points
         </FieldLabel>
         <FieldBody ColumnSize="ColumnSize.Is10" Size="Size.ExtraLarge">
@@ -16,7 +16,7 @@
         </FieldBody>
     </Field>
     <Field Horizontal="true">
-        <FieldLabel ColumnSize="ColumnSize.Is1">
+        <FieldLabel ColumnSize="ColumnSize.Is2">
             Scale
         </FieldLabel>
         <FieldBody ColumnSize="ColumnSize.Is10">
@@ -24,7 +24,7 @@
         </FieldBody>
     </Field>
         <Field Horizontal="true">
-        <FieldLabel ColumnSize="ColumnSize.Is1">
+        <FieldLabel ColumnSize="ColumnSize.Is2">
             Speed
         </FieldLabel>
         <FieldBody ColumnSize="ColumnSize.Is10">
@@ -63,6 +63,26 @@
     float vCenter;
     List<float[]> points = new List<float[]>();
     List<Dandelion> dandelions = new List<Dandelion>();
+    List<SKColor> colors = new List<SKColor>()
+        {
+            SKColors.YellowGreen,
+            SKColors.Green,
+            SKColors.Violet,
+            SKColors.WhiteSmoke,
+            SKColors.Tomato,
+            SKColors.Teal,
+            SKColors.SlateGray,
+            SKColors.SkyBlue,
+            SKColors.Red,
+            SKColors.Purple,
+            SKColors.Pink,
+            SKColors.Plum,
+            SKColors.PeachPuff,
+            SKColors.PaleGreen,
+            SKColors.Orange,
+            SKColors.Navy,
+            SKColors.Lime
+        };
 
     void OnClear()
     {
@@ -88,6 +108,7 @@
 
             dandelions.Add(new Dandelion()
             {
+                color = colors.ElementAt(random.Next(colors.Count())),
                 moveX = random.Next(-75, 75),
                 moveY = random.Next(-75, 75),
                 moveSpeed = moveSpeed,
@@ -117,7 +138,7 @@
         var now = DateTime.Now;
 
         // make sure the canvas is blank
-        canvas.Clear(SKColors.White);
+        canvas.Clear(SKColors.Black);
         using var textPaint = new SKPaint
         {
             IsAntialias = true,
@@ -163,6 +184,7 @@
 
         dandelions.ForEach((dandy) =>
         {
+            paint.Color = dandy.color;
             canvas.DrawPoints(
             SKPointMode.Points,
             dandy.points.ToArray(),

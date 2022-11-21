@@ -1,6 +1,12 @@
 .mainBody {
     position: absolute;
-    width: 99%;
+    width: 100%;
+    font-size: 3rem;
+    margin-left: 5px; 
+}
+.body {
+    font-size: 3rem;
+    margin-left: 5px;
 }
 .canvas-container canvas {
     width: 100%;
@@ -9,6 +15,7 @@
 
 .container {
     width: 100%;
+    font-size: 3rem;
 }
 
 h1:focus {
