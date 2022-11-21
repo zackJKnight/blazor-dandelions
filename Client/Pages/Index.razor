@@ -14,25 +14,18 @@
             <Slider class="align-middle" @bind-Value="@numberOfPoints" Min="1" Max="500" Step="10" Size="Size.ExtraLarge" />
         </FieldBody>
     </Field>
-    <Field Horizontal="true">
-        <FieldLabel ColumnSize="ColumnSize.Is2">
-            Scale
-        </FieldLabel>
-        <FieldBody ColumnSize="ColumnSize.Is10">
-            <Slider TValue="float" @bind-Value="@pointScale" Min="26" Max="100" Step="2" />
-        </FieldBody>
-    </Field>
     <Row>
         <Column ColumnSize="ColumnSize.Is3">
-            <NumericPicker @bind-Value="@numberOfDandies" Min="1" Max="500" Step="10" />
+            <NumericPicker Size="Size.ExtraLarge" @bind-Value="@numberOfDandies" Min="1" Max="500" Step="10" />
         </Column>
         <Column ColumnSize="ColumnSize.Is3">
             <Field><FieldLabel>@totalPoints</FieldLabel></Field>
         </Column>
-        <Column ColumnSize="ColumnSize.Is3">
-            <Button Border="Border.Is1" Clicked="@OnClear">Clear </Button>
+        <Column ColumnSize="ColumnSize.Is2">
+            <Button Border="Border.Is1" Clicked="@OnClear" Size="Size.ExtraLarge" id="clear-button">Clear </Button>
         </Column>
     </Row>
+    <a href="https://github.com/zackJKnight/blazor-dandelions">See the Code</a>
 
 @code
 {

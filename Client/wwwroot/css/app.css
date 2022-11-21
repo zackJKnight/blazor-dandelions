@@ -19,6 +19,10 @@
     width: 100%;
     font-size: 3rem;
 }
+.clear-button button {
+    background-color: dimgrey;
+    color:cornsilk ;
+}
 
 h1:focus {
     outline: none;
