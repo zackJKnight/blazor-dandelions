@@ -8,7 +8,6 @@ public class Dandelion
     public bool moveUp { get; set; } = true;
     public bool moveRight { get; set; } = true;
     public int moveSpeed { get; set; } = 1;
-    public string startColorHex { get; set; } = "FFFF0000";
 
     public void Update(float hCenter, float vCenter, float pointScale)
     {

@@ -3,31 +3,45 @@
 @using SkiaSharp.Views.Blazor
 
 <PageTitle>Dandelions</PageTitle>
-<Container>
-    <br />
-    <div class="border rounded p-2 canvas-container" @ref="testRef" tabindex="0" @onkeydown="HandleKeyDown">
+        <div class="border rounded p-2 canvas-container" @ref="testRef" tabindex="0" @onkeydown="HandleKeyDown">
         <SKGLView OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="true" />
-    </div>
+        </div>
     <br />
+    <Field Horizontal="true">
+        <FieldLabel ColumnSize="ColumnSize.Is1">
+            Points
+        </FieldLabel>
+        <FieldBody ColumnSize="ColumnSize.Is10">
+            <Slider class="align-middle" @bind-Value="@numberOfPoints" Min="1" Max="500" Step="10" />
+        </FieldBody>
+    </Field>
+    <Field Horizontal="true">
+        <FieldLabel ColumnSize="ColumnSize.Is1">
+            Scale
+        </FieldLabel>
+        <FieldBody ColumnSize="ColumnSize.Is10">
+            <Slider TValue="float" @bind-Value="@pointScale" Min="26" Max="100" Step="2" />
+        </FieldBody>
+    </Field>
+        <Field Horizontal="true">
+        <FieldLabel ColumnSize="ColumnSize.Is1">
+            Speed
+        </FieldLabel>
+        <FieldBody ColumnSize="ColumnSize.Is10">
+            <Slider @bind-Value="@moveSpeed" Min="0" Max="25" Step="1" />
+        </FieldBody>
+    </Field>
     <Row>
-        <Column>
+        <Column ColumnSize="ColumnSize.Is3">
             <NumericPicker @bind-Value="@numberOfDandies" Min="1" Max="500" Step="10" />
         </Column>
-        <Column>
-            <Text>@totalPoints</Text>
+        <Column ColumnSize="ColumnSize.Is3">
+            <Field><FieldLabel>@totalPoints</FieldLabel></Field>
         </Column>
-        <Column>
+        <Column ColumnSize="ColumnSize.Is3">
             <Button Border="Border.Is1" Clicked="@OnClear">Clear </Button>
         </Column>
     </Row>
-    <br />
-    <Text>Points</Text>
-    <Slider @bind-Value="@numberOfPoints" Min="1" Max="500" Step="10" />
-    <Text>Scale</Text>
-    <Slider TValue="float" @bind-Value="@pointScale" Min="26" Max="100" Step="2" />
-    <Text>Speed</Text>
-    <Slider @bind-Value="@moveSpeed" Min="0" Max="25" Step="1" />
-</Container>
 
 @code
 {
@@ -141,7 +155,7 @@
             dandy.Update(hCenter, vCenter, pointScale);
             dandy.points.Clear();
 
-            points.ToList().ForEach(point =>
+            (points as List<float[]>).ForEach(point =>
             dandy.points.Add(new SKPoint((point[0] * pointScale) + hCenter + dandy.moveX,
             (point[1] * pointScale) + vCenter + dandy.moveY)));
 
