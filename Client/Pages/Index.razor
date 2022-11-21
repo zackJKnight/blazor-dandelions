@@ -7,12 +7,12 @@
         <SKGLView OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="true" />
         </div>
     <br />
-    <Field Horizontal="true">
-        <FieldLabel ColumnSize="ColumnSize.Is1">
+    <Field Horizontal="true" Size="Size.ExtraLarge">
+        <FieldLabel ColumnSize="ColumnSize.Is1" Size="Size.ExtraLarge">
             Points
         </FieldLabel>
-        <FieldBody ColumnSize="ColumnSize.Is10">
-            <Slider class="align-middle" @bind-Value="@numberOfPoints" Min="1" Max="500" Step="10" />
+        <FieldBody ColumnSize="ColumnSize.Is10" Size="Size.ExtraLarge">
+            <Slider class="align-middle" @bind-Value="@numberOfPoints" Min="1" Max="500" Step="10" Size="Size.ExtraLarge" />
         </FieldBody>
     </Field>
     <Field Horizontal="true">
@@ -150,7 +150,7 @@
         for (float i = 0; i < numberOfDandies; i++)
         {
             var dandy = dandelions.ElementAt((int)i);
-            dandy.moveSpeed = moveSpeed > 0 ? moveSpeed + (int)i : moveSpeed;
+            dandy.moveSpeed = moveSpeed > 0 && moveSpeed < 20 ? moveSpeed + (int)i : moveSpeed;
             // higher the x and y, the more right and down
             dandy.Update(hCenter, vCenter, pointScale);
             dandy.points.Clear();
