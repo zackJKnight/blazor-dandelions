@@ -6,7 +6,6 @@
         <div class="border rounded p-2 canvas-container" @ref="testRef" tabindex="0" @onkeydown="HandleKeyDown">
         <SKGLView OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="true" />
         </div>
-    <br />
     <Field Horizontal="true" Size="Size.ExtraLarge">
         <FieldLabel ColumnSize="ColumnSize.Is2" Size="Size.ExtraLarge">
             Points
@@ -21,14 +20,6 @@
         </FieldLabel>
         <FieldBody ColumnSize="ColumnSize.Is10">
             <Slider TValue="float" @bind-Value="@pointScale" Min="26" Max="100" Step="2" />
-        </FieldBody>
-    </Field>
-        <Field Horizontal="true">
-        <FieldLabel ColumnSize="ColumnSize.Is2">
-            Speed
-        </FieldLabel>
-        <FieldBody ColumnSize="ColumnSize.Is10">
-            <Slider @bind-Value="@moveSpeed" Min="0" Max="25" Step="1" />
         </FieldBody>
     </Field>
     <Row>
@@ -58,6 +49,7 @@
     bool moveUp = true;
     bool moveRight = true;
     int moveSpeed = 1;
+    int topSpeed = 6;
     float pointScale = 30.0f;
     float hCenter;
     float vCenter;
@@ -112,8 +104,8 @@
                 moveX = random.Next(-75, 75),
                 moveY = random.Next(-75, 75),
                 moveSpeed = moveSpeed,
-                moveRight = moveRight,
-                moveUp = moveUp
+                moveRight = random.NextDouble() >= 0.5,
+                moveUp = random.NextDouble() >= 0.5
             });
         }
     }
@@ -138,7 +130,7 @@
         var now = DateTime.Now;
 
         // make sure the canvas is blank
-        canvas.Clear(SKColors.Black);
+        canvas.Clear(SKColors.DarkSlateGray);
         using var textPaint = new SKPaint
         {
             IsAntialias = true,
@@ -171,7 +163,7 @@
         for (float i = 0; i < numberOfDandies; i++)
         {
             var dandy = dandelions.ElementAt((int)i);
-            dandy.moveSpeed = moveSpeed > 0 && moveSpeed < 20 ? moveSpeed + (int)i : moveSpeed;
+            dandy.moveSpeed = moveSpeed > 0 && moveSpeed < topSpeed ? moveSpeed + (int)i : moveSpeed;
             // higher the x and y, the more right and down
             dandy.Update(hCenter, vCenter, pointScale);
             dandy.points.Clear();
