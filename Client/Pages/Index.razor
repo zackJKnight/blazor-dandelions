@@ -4,7 +4,7 @@
 
 <PageTitle>Dandelions</PageTitle>
         <div class="border rounded p-2 canvas-container" @ref="testRef" tabindex="0" @onkeydown="HandleKeyDown">
-        <SKGLView OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="true" />
+        <SKGLView OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="true" EnableTouchEvents="true" OnTouch="@OnTouched" />
         </div>
     <Field Horizontal="true" Size="Size.ExtraLarge">
         <FieldLabel ColumnSize="ColumnSize.Is2" Size="Size.ExtraLarge">
@@ -36,11 +36,11 @@
     long lastTick = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     double GoldenRatio = 1.61803398874989484820458683436;
     int numberOfPoints = 20;
+    int previousTickNumberOfPoints = 20;
     int numberOfDandies = 1;
     int alpha = 0;
     Random random = new Random();
-    bool moveUp = true;
-    bool moveRight = true;
+
     int moveSpeed = 1;
     int topSpeed = 6;
     float pointScale = 30.0f;
@@ -68,7 +68,10 @@
             SKColors.Navy,
             SKColors.Lime
         };
-
+    void OnTouched()
+    {
+        numberOfDandies += 10;
+    }
     void OnClear()
     {
         numberOfDandies = 0;
@@ -105,6 +108,14 @@
 
     void OnPaintSurface(SKPaintGLSurfaceEventArgs e)
     {
+        //if prevTickNumberOfPoints not equal numberOfPoints, clear points. otherwise leave them?????
+        if(previousTickNumberOfPoints != numberOfPoints)
+        {
+            points.Clear();
+            FillCircleWithPoints(numberOfPoints, alpha);
+            previousTickNumberOfPoints = numberOfPoints;
+        }
+        
         totalPoints = $"Total: {numberOfPoints * numberOfDandies}";
                 // the the canvas and properties
         SKCanvas canvas = e.Surface.Canvas;
@@ -151,8 +162,7 @@
 
         // Region
         paint.Style = SKPaintStyle.Stroke;
-        points.Clear();
-        FillCircleWithPoints(numberOfPoints, alpha);
+
         for (float i = 0; i < numberOfDandies; i++)
         {
             var dandy = dandelions.ElementAt((int)i);
