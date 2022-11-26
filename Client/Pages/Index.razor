@@ -42,7 +42,7 @@
     Random random = new Random();
 
     int moveSpeed = 1;
-    int topSpeed = 6;
+    int topSpeed = 15;
     float pointScale = 30.0f;
     float hCenter;
     float vCenter;
@@ -171,7 +171,7 @@
         for (float i = 0; i < numberOfDandies; i++)
         {
             var dandy = dandelions.ElementAt((int)i);
-            dandy.moveSpeed = moveSpeed > 0 && moveSpeed < topSpeed ? moveSpeed + (int)i : moveSpeed;
+            dandy.moveSpeed = (int)i <= topSpeed ? (int)i + 1 : (int) i% topSpeed + 1;
             // higher the x and y, the more right and down
             dandy.Update(hCenter, vCenter, pointScale);
 
