@@ -96,6 +96,7 @@
 
             dandelions.Add(new Dandelion()
             {
+                points = new SKPoint[numberOfPoints],
                 color = colors.ElementAt(random.Next(colors.Count())),
                 moveX = random.Next(-((int)hCenter), ((int)hCenter)),
                 moveY = random.Next(-((int)vCenter), ((int)vCenter)),
@@ -114,6 +115,10 @@
             points.Clear();
             FillCircleWithPoints(numberOfPoints, alpha);
             previousTickNumberOfPoints = numberOfPoints;
+            for (int i = 0; i < dandelions.Count(); i++)
+            {
+                dandelions.ElementAt(i).points = new SKPoint[numberOfPoints];
+            }
         }
         
         totalPoints = $"Total: {numberOfPoints * numberOfDandies}";
@@ -169,12 +174,12 @@
             dandy.moveSpeed = moveSpeed > 0 && moveSpeed < topSpeed ? moveSpeed + (int)i : moveSpeed;
             // higher the x and y, the more right and down
             dandy.Update(hCenter, vCenter, pointScale);
-            dandy.points.Clear();
 
-            (points as List<float[]>).ForEach(point =>
-            dandy.points.Add(new SKPoint((point[0] * pointScale) + hCenter + dandy.moveX,
-            (point[1] * pointScale) + vCenter + dandy.moveY)));
-
+            for (int j = 0; j < points.Count(); j ++)
+            {
+                dandy.points[j] = new SKPoint((points[j][0] * pointScale) + hCenter + dandy.moveX,
+                (points[j][1] * pointScale) + vCenter + dandy.moveY);
+            }
         }
 
         dandelions.ForEach((dandy) =>
@@ -182,7 +187,7 @@
             paint.Color = dandy.color;
             canvas.DrawPoints(
             SKPointMode.Points,
-            dandy.points.ToArray(),
+            dandy.points,
             paint);
         });
 
