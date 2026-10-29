@@ -1,6 +1,7 @@
 @page "/"
 @using SkiaSharp
 @using SkiaSharp.Views.Blazor
+@using System.Diagnostics
 
 <PageTitle>Dandelions</PageTitle>
 
@@ -19,6 +20,7 @@
           @onkeydown="HandleKeyDown">
         <SKGLView OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="true" />
         <span class="canvas-hint" aria-hidden="true">Tap drawing to add 10</span>
+        <output id="fps-display" class="fps-indicator" aria-label="Approximate frame rate" title="Smoothed render callbacks per second">FPS @(hasFrameRateSample ? displayedFps.ToString() : "—")</output>
     </main>
 
     <section class="controls-panel" aria-label="Drawing controls">
@@ -43,7 +45,15 @@
                             aria-label="Remove one dandelion"
                             disabled="@(numberOfDandies == 0)"
                             @onclick="() => ChangeDandelions(-1)">−</button>
-                    <output id="dandelion-count" aria-live="polite">@numberOfDandies</output>
+                    <input id="dandelion-count"
+                           class="count-input"
+                           type="number"
+                           inputmode="numeric"
+                           aria-label="Number of dandelions"
+                           min="0"
+                           max="500"
+                           step="1"
+                           @bind="DandelionCount" />
                     <button id="add-one" class="stepper-button" type="button"
                             aria-label="Add one dandelion"
                             disabled="@(numberOfDandies == 500)"
@@ -69,14 +79,20 @@
 @code
 {
     int TotalPoints => numberOfPoints * numberOfDandies;
-    int tickIndex = 0;
-    long tickSum = 0;
-    long[] tickList = new long[100];
-    long lastTick = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    long fpsWindowStart;
+    int framesInWindow;
+    double smoothedFps;
+    int displayedFps;
+    bool hasFrameRateSample;
     double GoldenRatio = 1.61803398874989484820458683436;
     int numberOfPoints = 20;
     int previousTickNumberOfPoints = -1;
     int numberOfDandies = 1;
+    int DandelionCount
+    {
+        get => numberOfDandies;
+        set => numberOfDandies = Math.Clamp(value, 0, 500);
+    }
     int alpha = 0;
     Random random = new Random();
 
@@ -172,26 +188,11 @@
         }
 
         OnNumberOfDandiesChanged(numberOfDandies);
-        var fps = GetCurrentFPS();
-
-        var now = DateTime.Now;
+        SampleFrameRate();
 
         // make sure the canvas is blank
         canvas.Clear(SKColors.DarkSlateGray);
-        using var textPaint = new SKPaint
-        {
-            IsAntialias = true,
-            StrokeWidth = 6f,
-            StrokeCap = SKStrokeCap.Round,
-            TextAlign = SKTextAlign.Center,
-            TextSize = 32,
-            Style = SKPaintStyle.Fill,
-            Color = SKColors.Red
-        };
-        // draw the fps counter
-
-        canvas.DrawText($"{fps:0.00}", hCenter, surfaceSize.Height - 10f, textPaint);
-        // background
+        // Background and moving dandelions
         using var paint = new SKPaint
         {
             IsAntialias = true,
@@ -233,22 +234,36 @@
 
     }
 
-    double GetCurrentFPS()
+    void SampleFrameRate()
     {
-        var newTick = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var delta = newTick - lastTick;
-        lastTick = newTick;
-
-        tickSum -= tickList[tickIndex];
-        tickSum += delta;
-        tickList[tickIndex] = delta;
-
-        if (++tickIndex == tickList.Length)
+        // Stopwatch is monotonic, unlike wall-clock timestamps.
+        var now = Stopwatch.GetTimestamp();
+        if (fpsWindowStart == 0)
         {
-            tickIndex = 0;
+            fpsWindowStart = now;
+            return;
         }
 
-        return 1000.0 / ((double)tickSum / tickList.Length);
+        framesInWindow++;
+        var elapsed = (now - fpsWindowStart) / (double)Stopwatch.Frequency;
+        if (elapsed < 0.75)
+            return;
+
+        var sample = framesInWindow / elapsed;
+        // A small rolling blend keeps the label legible on variable-rate displays.
+        smoothedFps = hasFrameRateSample ? (smoothedFps * 0.65 + sample * 0.35) : sample;
+        hasFrameRateSample = true;
+        fpsWindowStart = now;
+        framesInWindow = 0;
+
+        var rounded = (int)Math.Round(smoothedFps);
+        if (rounded != displayedFps)
+        {
+            displayedFps = rounded;
+            // The canvas still animates independently; render the overlay only
+            // when the displayed integer changes (never on every paint callback).
+            _ = InvokeAsync(StateHasChanged);
+        }
     }
 
     double GetRadius(int k, int n, double b)
