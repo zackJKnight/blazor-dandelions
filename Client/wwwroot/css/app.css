@@ -69,16 +69,24 @@ button:focus-visible,
 .count-editor { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .count-label { font-weight: 600; }
 .count-stepper { display: flex; align-items: center; gap: 3px; }
-.count-stepper output {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 52px;
-    padding: 0 3px;
+.count-input {
+    width: 62px;
+    min-width: 62px;
+    height: 48px;
+    padding: 5px 4px;
+    border: 1px solid #8dbcb5;
+    border-radius: 8px;
+    background: #192f32;
+    color: #fff;
+    text-align: center;
+    font: inherit;
     font-size: 1.15rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+    appearance: textfield;
 }
+.count-input::-webkit-inner-spin-button,
+.count-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .quick-actions { display: flex; gap: 8px; }
 .stepper-button, .secondary-button, .clear-button {
     min-width: 50px;
@@ -112,7 +120,7 @@ button:not(:disabled):active { transform: translateY(1px); filter: brightness(1.
 @media (max-width: 370px) {
     .count-actions { display: grid; grid-template-columns: 1fr auto; align-items: end; }
     .count-editor { gap: 3px; }
-    .count-stepper output { min-width: 36px; }
+    .count-input { width: 58px; min-width: 58px; }
     .quick-actions { gap: 5px; }
     .stepper-button, .secondary-button, .clear-button { min-width: 44px; padding: 8px 10px; }
 }
