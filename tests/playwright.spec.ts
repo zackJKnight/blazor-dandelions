@@ -3,7 +3,9 @@ import { test, expect } from '@playwright/test';
 test('drawing controls update the count and clear the canvas', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveTitle('Dandelions');
+  await expect(page.locator('#blazor-error-ui')).toBeHidden();
   await expect(page.locator('#drawing-surface canvas')).toBeVisible();
+  await expect(page.locator('#blazor-error-ui')).toBeHidden();
   await expect(page.locator('#fps-display')).toBeVisible();
   // Headless browsers may disable WebGL: no paint callbacks means no measurable FPS.
   await expect(page.locator('#fps-display')).toHaveText(/^FPS (—|\d+)( · low \d+)?$/);
@@ -20,6 +22,7 @@ test('drawing controls update the count and clear the canvas', async ({ page }) 
   await expect(page.locator('#points-value')).toHaveText('25');
   // Changing point geometry while rendering must leave the GL canvas usable.
   await expect(page.locator('#drawing-surface canvas')).toBeVisible();
+  await expect(page.locator('#blazor-error-ui')).toBeHidden();
   await expect(page.locator('#total-points')).toHaveText('300 points');
 
   await page.getByRole('spinbutton', { name: 'Number of dandelions' }).fill('37');
@@ -45,6 +48,7 @@ test('controls fit a phone screen with touch-sized targets', async ({ page }) =>
   await page.setViewportSize({ width: 360, height: 740 });
   await page.goto('/');
   await expect(page.locator('#drawing-surface canvas')).toBeVisible();
+  await expect(page.locator('#blazor-error-ui')).toBeHidden();
   await expect(page.locator('#clear-button')).toBeVisible();
   await expect(page.locator('#fps-display')).toBeVisible();
 
@@ -91,6 +95,7 @@ test('changing point geometry repeatedly preserves controls and drawing', async 
 
   await expect(page.locator('#points-value')).toHaveText('45');
   await expect(page.locator('#drawing-surface canvas')).toBeVisible();
+  await expect(page.locator('#blazor-error-ui')).toBeHidden();
   await page.locator('#add-ten').click();
   await expect(page.locator('#dandelion-count')).toHaveValue('11');
   await page.locator('#clear-button').click();
