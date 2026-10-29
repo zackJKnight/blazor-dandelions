@@ -1,6 +1,16 @@
 # Dandelions (.NET 10 upgrade)
 
-A Blazor WebAssembly canvas app with a small Azure Functions weather API.
+A Blazor WebAssembly **WebGL2 GPU drawing demo**, with a small Azure Functions weather API.
+
+## GPU architecture
+
+The dandelion scene is authored in C# / Blazor: UI controls, point geometry, flower colors, initial seeds, and velocities. A small JS interop module (`Client/wwwroot/js/dandelions-gpu.js`) initializes a real **WebGL2** context and uploads point/flower buffers only when scene settings change.
+
+The WebGL2 vertex shader computes movement and expands each flower from one shared point pattern via **instanced rendering** (`gl.drawArraysInstanced`). Animation runs with `requestAnimationFrame` and a single draw call per frame regardless of flower count. Blazor receives only infrequent FPS updates rather than per-frame interop.
+
+There is deliberately **no CPU canvas fallback**. If WebGL2 is unavailable, the app displays an error. The Playwright startup test asserts that the canvas has a WebGL2 context and has issued drawing frames; visibility alone does not count as a pass. On CI, WebGL2 may be backed by a software driver (e.g., SwiftShader), so passing CI demonstrates use of the GPU API, not that a physical GPU was used. For the full demo, test on a hardware-accelerated browser/device.
+
+
 
 ## Requirements
 

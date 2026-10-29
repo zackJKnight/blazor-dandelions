@@ -1,8 +1,7 @@
 @page "/"
-@using SkiaSharp
-@using SkiaSharp.Views.Blazor
-@using System.Diagnostics
-@implements IDisposable
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <PageTitle>Dandelions</PageTitle>
 
@@ -22,12 +21,20 @@
           aria-label="Animated drawing. Tap to add ten dandelions. Use arrow keys to adjust the count."
           @onclick="OnTouched"
           @onkeydown="HandleKeyDown">
-        <SKCanvasView OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="true" />
+        <canvas id="gpu-canvas" @ref="canvasElement" aria-label="GPU animated dandelions using WebGL2"></canvas>
+        @if (gpuError is not null)
+        {
+            <p class="gpu-error" role="alert">@gpuError</p>
+        }
         @if (!hasTappedCanvas)
         {
             <span class="canvas-hint" aria-hidden="true">Tap drawing to add 10</span>
         }
-        <output id="fps-display" class="fps-indicator" aria-label="Approximate frame rate" title="Smoothed render callbacks per second; low is the minimum over approximately the last eight seconds">FPS @(hasFrameRateSample ? displayedFps.ToString() : "—")@if (hasFrameRateSample) { <text> · low @lowestRecentFps</text> }</output>
+        @if (gpuReady)
+        {
+            <span class="gpu-label" aria-label="GPU renderer active">WebGL2 GPU</span>
+        }
+        <output id="fps-display" class="fps-indicator" aria-label="Approximate frame rate" title="Browser animation frames per second; low is the minimum over recent samples">FPS @(hasFrameRateSample ? displayedFps.ToString() : "—")@if (hasFrameRateSample) { <text> · low @lowestRecentFps</text> }</output>
     </main>
 
     <section class="controls-panel" aria-label="Drawing controls">
@@ -81,217 +88,53 @@
 
 @code
 {
-    int TotalPoints => numberOfPoints * numberOfDandies;
-    bool hasTappedCanvas;
-    long lastFrameTimestamp;
-    readonly int[] fpsSamples = new int[10];
-    int fpsSampleCount;
-    int fpsSampleIndex;
-    int lowestRecentFps;
-    long fpsWindowStart;
-    int framesInWindow;
-    double smoothedFps;
-    int displayedFps;
-    bool hasFrameRateSample;
-    double GoldenRatio = 1.61803398874989484820458683436;
-    int numberOfPoints = 20;
-    int previousTickNumberOfPoints = -1;
-    int numberOfDandies = 1;
-    int DandelionCount
+    private const double GoldenRatio = 1.61803398874989484820458683436;
+    private const float PointScale = 30f;
+    private const int MaxFlowers = 500;
+
+    private static readonly uint[] Palette =
+    [
+        0x9ACD32, 0x008000, 0xEE82EE, 0xF5F5F5, 0xFF6347,
+        0x008080, 0x708090, 0x87CEEB, 0xFF0000, 0x800080,
+        0xFFC0CB, 0xDDA0DD, 0xFFDAB9, 0x98FB98, 0xFFA500,
+        0x000080, 0x00FF00
+    ];
+
+    private readonly Random random = new();
+    private readonly List<Dandelion> dandelions = [];
+    private ElementReference canvasElement;
+    private IJSObjectReference? module;
+    private IJSObjectReference? renderer;
+    private DotNetObjectReference<Index>? dotNetRef;
+
+    private int numberOfPoints = 20;
+    private int numberOfDandies = 1;
+    private int uploadedPointCount = -1;
+    private int uploadedDandelionCount = -1;
+    private bool hasTappedCanvas;
+    private bool gpuReady;
+    private bool hasFrameRateSample;
+    private int displayedFps;
+    private int lowestRecentFps;
+    private string? gpuError;
+
+    private int TotalPoints => numberOfPoints * numberOfDandies;
+    private int DandelionCount
     {
         get => numberOfDandies;
-        set => numberOfDandies = Math.Clamp(value, 0, 500);
+        set => numberOfDandies = Math.Clamp(value, 0, MaxFlowers);
     }
-    int alpha = 0;
-    Random random = new Random();
 
-    int moveSpeed = 1;
-    int topSpeed = 15;
-    float pointScale = 30.0f;
-    float hCenter;
-    float vCenter;
-    SKPoint[] localPoints = Array.Empty<SKPoint>();
-    List<Dandelion> dandelions = new List<Dandelion>();
-    // Allocate native Skia resources only after SKGLView has initialized Skia.
-    SKPaint? dotPaint;
-    List<SKColor> colors = new List<SKColor>()
-        {
-            SKColors.YellowGreen,
-            SKColors.Green,
-            SKColors.Violet,
-            SKColors.WhiteSmoke,
-            SKColors.Tomato,
-            SKColors.Teal,
-            SKColors.SlateGray,
-            SKColors.SkyBlue,
-            SKColors.Red,
-            SKColors.Purple,
-            SKColors.Pink,
-            SKColors.Plum,
-            SKColors.PeachPuff,
-            SKColors.PaleGreen,
-            SKColors.Orange,
-            SKColors.Navy,
-            SKColors.Lime
-        };
-    void OnTouched()
+    private void OnTouched()
     {
         hasTappedCanvas = true;
         ChangeDandelions(10);
     }
-    void ChangeDandelions(int change)
-    {
-        numberOfDandies = Math.Clamp(numberOfDandies + change, 0, 500);
-    }
-    void OnClear()
-    {
-        numberOfDandies = 0;
-        OnNumberOfDandiesChanged(0);
-    }
-    void OnNumberOfDandiesChanged(int newDandyCount)
-    {
-        if (dandelions.Count < newDandyCount)
-        {
-            AddDandies((int)(newDandyCount - dandelions.Count()));
-        }
-        else if (dandelions.Count() > newDandyCount)
-        {
-            dandelions.RemoveRange((int)newDandyCount, (int)(dandelions.Count() - newDandyCount));
-        }
-    }
-    void AddDandies(int numberToAdd)
-    {
-        for (int i = 0; i < numberToAdd; i++)
-        {
 
-            dandelions.Add(new Dandelion()
-            {
-                color = colors[random.Next(colors.Count)],
-                moveX = random.Next(-((int)hCenter), ((int)hCenter)),
-                moveY = random.Next(-((int)vCenter), ((int)vCenter)),
-                moveSpeed = moveSpeed,
-                moveRight = random.NextDouble() >= 0.5,
-                moveUp = random.NextDouble() >= 0.5
-            });
-        }
-    }
+    private void ChangeDandelions(int count) =>
+        numberOfDandies = Math.Clamp(numberOfDandies + count, 0, MaxFlowers);
 
-    void OnPaintSurface(SKPaintSurfaceEventArgs e)
-    {
-        var timestamp = Stopwatch.GetTimestamp();
-        // At 60 FPS a moveSpeed of 1 still means 1 pixel per frame.
-        // Clamp long background-tab pauses so a resumed flower doesn't teleport.
-        float deltaSeconds = lastFrameTimestamp == 0 ? (1f / 60f)
-            : (float)Math.Clamp((timestamp - lastFrameTimestamp) / (double)Stopwatch.Frequency, 0.0, 0.1);
-        lastFrameTimestamp = timestamp;
-
-        // Golden-angle geometry is shared by every dandelion, and only changes
-        // when the points-per-dandelion control changes.
-        if (previousTickNumberOfPoints != numberOfPoints)
-        {
-            RebuildLocalPoints(numberOfPoints, alpha);
-            previousTickNumberOfPoints = numberOfPoints;
-        }
-
-        var canvas = e.Surface.Canvas;
-        var paint = dotPaint ??= new SKPaint
-        {
-            IsAntialias = true,
-            StrokeWidth = 3f,
-            StrokeCap = SKStrokeCap.Round,
-            Style = SKPaintStyle.Stroke
-        };
-        var surfaceSize = e.Info.Size;
-        hCenter = surfaceSize.Width / 2f;
-        vCenter = surfaceSize.Height / 2f;
-
-        OnNumberOfDandiesChanged(numberOfDandies);
-        SampleFrameRate(timestamp);
-        canvas.Clear(SKColors.DarkSlateGray);
-
-        for (int i = 0; i < dandelions.Count; i++)
-        {
-            var dandy = dandelions[i];
-            dandy.moveSpeed = i <= topSpeed ? i + 1 : i % topSpeed + 1;
-            dandy.Update(hCenter, vCenter, pointScale, deltaSeconds);
-
-            // Apply movement once per flower rather than rewriting all its
-            // point positions on every render callback.
-            paint.Color = dandy.color;
-            canvas.Save();
-            canvas.Translate(hCenter + dandy.moveX, vCenter + dandy.moveY);
-            canvas.DrawPoints(SKPointMode.Points, localPoints, paint);
-            canvas.Restore();
-        }
-    }
-
-    void SampleFrameRate(long now)
-    {
-        if (fpsWindowStart == 0)
-        {
-            fpsWindowStart = now;
-            return;
-        }
-
-        framesInWindow++;
-        var elapsed = (now - fpsWindowStart) / (double)Stopwatch.Frequency;
-        if (elapsed < 0.75)
-            return;
-
-        var sample = framesInWindow / elapsed;
-        // A small rolling blend keeps the label legible on variable-rate displays.
-        smoothedFps = hasFrameRateSample ? (smoothedFps * 0.65 + sample * 0.35) : sample;
-        hasFrameRateSample = true;
-        fpsWindowStart = now;
-        framesInWindow = 0;
-
-        var rounded = (int)Math.Round(smoothedFps);
-        fpsSamples[fpsSampleIndex] = (int)Math.Round(sample);
-        fpsSampleIndex = (fpsSampleIndex + 1) % fpsSamples.Length;
-        fpsSampleCount = Math.Min(fpsSampleCount + 1, fpsSamples.Length);
-        var low = fpsSamples.Take(fpsSampleCount).Min();
-        if (rounded != displayedFps || low != lowestRecentFps)
-        {
-            displayedFps = rounded;
-            lowestRecentFps = low;
-            // The canvas still animates independently; render the overlay only
-            // when the displayed integer changes (never on every paint callback).
-            _ = InvokeAsync(StateHasChanged);
-        }
-    }
-
-    double GetRadius(int k, int n, double b)
-    {
-        double r = 0.0;
-
-        if (k > (n - b))
-        {
-            r = 1.0;
-        }
-        else
-        {
-            r = Math.Sqrt(k - 1 / 2) / Math.Sqrt(n - (b + 1) / 2);
-        }
-
-        return r;
-    }
-
-    void RebuildLocalPoints(int n, int alpha)
-    {
-        var circle = new SKPoint[n];
-        double boundaryPointCount = Math.Round(alpha * Math.Sqrt(n));
-
-        for (int k = 1; k <= n; k++)
-        {
-            double radius = GetRadius(k, n, boundaryPointCount);
-            double theta = 2 * Math.PI * k / Math.Pow(GoldenRatio, 2);
-            circle[k - 1] = new SKPoint(
-                (float)(radius * Math.Cos(theta) * pointScale),
-                (float)(radius * Math.Sin(theta) * pointScale));
-        }
-
-        localPoints = circle;
-    }
+    private void OnClear() => numberOfDandies = 0;
 
     private void HandleKeyDown(KeyboardEventArgs e)
     {
@@ -300,11 +143,118 @@
         else if (e.Key == "ArrowLeft")
             ChangeDandelions(-1);
         else if (e.Key == "Enter")
-            ChangeDandelions(10);
-    }
-    public void Dispose()
-    {
-        dotPaint?.Dispose();
+            OnTouched();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            if (firstRender)
+            {
+                module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/dandelions-gpu.js");
+                dotNetRef = DotNetObjectReference.Create(this);
+                renderer = await module.InvokeAsync<IJSObjectReference>("createRenderer", canvasElement, dotNetRef);
+                gpuReady = true;
+                await InvokeAsync(StateHasChanged);
+            }
+
+            if (renderer is not null &&
+                (numberOfPoints != uploadedPointCount || numberOfDandies != uploadedDandelionCount))
+            {
+                UpdateDandelionCount();
+                var geometry = numberOfPoints != uploadedPointCount
+                    ? BuildPointGeometry(numberOfPoints)
+                    : Array.Empty<float>();
+                var instances = BuildInstances();
+
+                // Geometry is uploaded only when the points slider changes.
+                // The per-flower data is uploaded only when the count changes.
+                await renderer.InvokeVoidAsync("setScene", geometry, instances);
+
+                uploadedPointCount = numberOfPoints;
+                uploadedDandelionCount = numberOfDandies;
+            }
+        }
+        catch (Exception exception) when (exception is JSException or InvalidOperationException)
+        {
+            gpuReady = false;
+            gpuError = $"GPU initialization failed: {exception.Message}";
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void UpdateDandelionCount()
+    {
+        while (dandelions.Count < numberOfDandies)
+        {
+            var index = dandelions.Count;
+            float speed = (index <= 15 ? index + 1 : index % 15 + 1) * 60f;
+            dandelions.Add(new Dandelion
+            {
+                SeedX = 2f * random.NextSingle() - 1f,
+                SeedY = 2f * random.NextSingle() - 1f,
+                VelocityX = speed * (random.Next(2) == 0 ? -1f : 1f),
+                VelocityY = speed * (random.Next(2) == 0 ? -1f : 1f),
+                ColorRgb = Palette[random.Next(Palette.Length)]
+            });
+        }
+        if (dandelions.Count > numberOfDandies)
+            dandelions.RemoveRange(numberOfDandies, dandelions.Count - numberOfDandies);
+    }
+
+    private static float[] BuildPointGeometry(int count)
+    {
+        var points = new float[count * 2];
+        for (int k = 1; k <= count; k++)
+        {
+            var radius = Math.Sqrt((k - 0.5) / (count - 0.5));
+            var theta = 2.0 * Math.PI * k / (GoldenRatio * GoldenRatio);
+            points[(k - 1) * 2] = PointScale * (float)(radius * Math.Cos(theta));
+            points[(k - 1) * 2 + 1] = PointScale * (float)(radius * Math.Sin(theta));
+        }
+        return points;
+    }
+
+    private float[] BuildInstances()
+    {
+        // Each instance contains a seed position, a velocity, and an RGB color.
+        var data = new float[dandelions.Count * 7];
+        for (int i = 0; i < dandelions.Count; i++)
+        {
+            var flower = dandelions[i];
+            int offset = i * 7;
+            data[offset] = flower.SeedX;
+            data[offset + 1] = flower.SeedY;
+            data[offset + 2] = flower.VelocityX;
+            data[offset + 3] = flower.VelocityY;
+            data[offset + 4] = ((flower.ColorRgb >> 16) & 255) / 255f;
+            data[offset + 5] = ((flower.ColorRgb >> 8) & 255) / 255f;
+            data[offset + 6] = (flower.ColorRgb & 255) / 255f;
+        }
+        return data;
+    }
+
+    [JSInvokable]
+    public Task ReportFrameRate(int fps, int recentLow) =>
+        InvokeAsync(() =>
+        {
+            displayedFps = fps;
+            lowestRecentFps = recentLow;
+            hasFrameRateSample = true;
+            StateHasChanged();
+        });
+
+    public async ValueTask DisposeAsync()
+    {
+        if (renderer is not null)
+        {
+            try { await renderer.InvokeVoidAsync("dispose"); }
+            catch (JSDisconnectedException) { }
+            await renderer.DisposeAsync();
+        }
+        if (module is not null)
+            await module.DisposeAsync();
+        dotNetRef?.Dispose();
+    }
 }

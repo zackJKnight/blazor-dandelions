@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('Blazor and SkiaSharp initialize without a runtime error', async ({ page }) => {
+test('Blazor initializes the WebGL2 renderer and draws actual GPU frames', async ({ page }) => {
   const messages: string[] = [];
   page.on('console', message => {
     if (message.type() === 'error' || message.type() === 'warning') {
@@ -14,7 +14,22 @@ test('Blazor and SkiaSharp initialize without a runtime error', async ({ page })
 
   await page.goto('/');
   await expect(page).toHaveTitle('Dandelions');
-  await expect(page.locator('#drawing-surface canvas')).toBeVisible();
+  const canvas = page.locator('#gpu-canvas');
+  await expect(canvas).toBeVisible();
+  await expect(canvas).toHaveAttribute('data-renderer', 'webgl2');
+  await expect.poll(async () => Number(await canvas.getAttribute('data-gpu-frames')), {
+    timeout: 15000,
+    message: 'WebGL2 instanced draw calls must be producing frames',
+  }).toBeGreaterThan(0);
+  const details = await canvas.evaluate((element: HTMLCanvasElement) => {
+    const gl = element.getContext('webgl2');
+    return {
+      isWebGL2: gl instanceof WebGL2RenderingContext,
+      version: gl?.getParameter(gl.VERSION),
+    };
+  });
+  expect(details.isWebGL2).toBe(true);
+  expect(details.version).toContain('WebGL 2.0');
   await page.waitForTimeout(2500);
 
   const errorUi = page.locator('#blazor-error-ui');
@@ -26,4 +41,6 @@ test('Blazor and SkiaSharp initialize without a runtime error', async ({ page })
   await expect(errorUi).toBeHidden({ timeout: 2000 });
   await page.getByRole('button', { name: 'Add one dandelion' }).click({ timeout: 5000 });
   await expect(page.locator('#dandelion-count')).toHaveValue('2');
+  await expect.poll(async () => Number(await canvas.getAttribute('data-gpu-frames')), { timeout: 10000 })
+    .toBeGreaterThan(30);
 });
