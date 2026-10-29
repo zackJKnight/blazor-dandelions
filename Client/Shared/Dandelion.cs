@@ -2,6 +2,7 @@ using SkiaSharp;
 
 public class Dandelion
 {
+    public SKPoint[] points { get; set; }
     public SKColor color {get;set;} = SKColors.Black;
     public float moveX { get; set; } = 10f;
     public float moveY { get; set; } = 10f;
