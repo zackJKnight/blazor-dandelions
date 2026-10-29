@@ -8,22 +8,27 @@ test('drawing controls update the count and clear the canvas', async ({ page }) 
   await expect(page.locator('#total-points')).toHaveText('20 points');
 
   await page.getByRole('button', { name: 'Add one dandelion' }).click();
-  await expect(page.locator('#dandelion-count')).toHaveText('2');
+  await expect(page.locator('#dandelion-count')).toHaveValue('2');
   await page.locator('#add-ten').click();
-  await expect(page.locator('#dandelion-count')).toHaveText('12');
+  await expect(page.locator('#dandelion-count')).toHaveValue('12');
 
   await page.locator('#points-slider').focus();
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('#points-value')).toHaveText('25');
   await expect(page.locator('#total-points')).toHaveText('300 points');
 
+  await page.getByRole('spinbutton', { name: 'Number of dandelions' }).fill('37');
+  await page.getByRole('spinbutton', { name: 'Number of dandelions' }).press('Tab');
+  await expect(page.locator('#dandelion-count')).toHaveValue('37');
+  await expect(page.locator('#total-points')).toHaveText('925 points');
+
   await page.locator('#clear-button').click();
-  await expect(page.locator('#dandelion-count')).toHaveText('0');
+  await expect(page.locator('#dandelion-count')).toHaveValue('0');
   await expect(page.locator('#total-points')).toHaveText('0 points');
   await expect(page.getByRole('button', { name: 'Remove one dandelion' })).toBeDisabled();
 
   await page.locator('#drawing-surface').click({ position: { x: 40, y: 40 } });
-  await expect(page.locator('#dandelion-count')).toHaveText('10');
+  await expect(page.locator('#dandelion-count')).toHaveValue('10');
   await expect(page.getByRole('link', { name: 'See the Code' })).toHaveAttribute(
     'href', 'https://github.com/zackJKnight/blazor-dandelions'
   );
@@ -54,5 +59,5 @@ test('controls fit a phone screen with touch-sized targets', async ({ page }) =>
   expect(metrics.smallestTargetHeight).toBeGreaterThanOrEqual(44);
   expect(metrics.allTargetsInside).toBe(true);
   await page.getByRole('button', { name: 'Add one dandelion' }).click();
-  await expect(page.locator('#dandelion-count')).toHaveText('2');
+  await expect(page.locator('#dandelion-count')).toHaveValue('2');
 });
