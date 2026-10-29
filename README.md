@@ -1,54 +1,40 @@
-# Blazor Starter Application
+# Dandelions (.NET 10 upgrade)
 
-This template contains an example .NET 6 [Blazor WebAssembly](https://docs.microsoft.com/aspnet/core/blazor/?view=aspnetcore-6.0#blazor-webassembly) client application, a .NET 6 C# [Azure Functions](https://docs.microsoft.com/azure/azure-functions/functions-overview), and a C# class library with shared code.
+A Blazor WebAssembly canvas app with a small Azure Functions weather API.
 
-## Getting Started
+## Requirements
 
-1. Create a repository from the [GitHub template](https://docs.github.com/en/enterprise/2.22/user/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template) and then clone it locally to your machine.
+- .NET 10 SDK
+- Node.js 22 and npm (only for browser tests)
+- Azure Functions Core Tools v4 (only to run the API locally)
 
-1. In the **Api** folder, copy `local.settings.example.json` to `local.settings.json`
+## Run locally
 
-1. Continue using either Visual Studio or Visual Studio Code.
+```bash
+dotnet restore BlazorStaticWebApps.sln
+dotnet run --project Client/Client.csproj --urls http://127.0.0.1:5000
+```
 
-### Visual Studio 2022
+The canvas app opens at `http://127.0.0.1:5000`. The API can be started separately from `Api` using Azure Functions Core Tools v4. Copy `Api/local.settings.example.json` to `Api/local.settings.json` first.
 
-Once you clone the project, open the solution in [Visual Studio 2022](https://visualstudio.microsoft.com/vs/) and follow these steps:
+## Build and smoke test
 
-1. Right-click on the solution and select **Set Startup Projects...**.
+```bash
+dotnet workload install wasm-tools
+dotnet build BlazorStaticWebApps.sln -c Release
+dotnet publish Client/Client.csproj -c Release -o artifacts/client
+dotnet publish Api/Api.csproj -c Release -o artifacts/api
+npm ci
+npx playwright install chromium
+npx playwright test --project=chromium
+```
 
-1. Select **Multiple startup projects** and set the following actions for each project:
-    - *Api* - **Start**
-    - *ApiIsolated* - None
-    - *Client* - **Start**
-    - *Shared* - None
+The `.github/workflows/dotnet10-validation.yml` workflow builds both projects and runs Chromium smoke tests on the upgrade branch and pull requests.
 
-1. Press **F5** to launch both the client application and the Functions API app.
+## Azure Static Web Apps
 
-### Visual Studio Code with Azure Static Web Apps CLI
+The app is configured to deploy when changes are merged to `main`; pull requests use the Azure preview environment. The workflow first publishes with the .NET 10 SDK and then uploads the built output with the build skipped in Azure's deploy action. This avoids relying on the Oryx build image to provide the SDK.
 
-1. Install the [Azure Static Web Apps CLI](https://www.npmjs.com/package/@azure/static-web-apps-cli) and [Azure Functions Core Tools CLI](https://www.npmjs.com/package/azure-functions-core-tools).
+The managed API uses `dotnet-isolated:10.0`, configured in `Client/wwwroot/staticwebapp.config.json`. Azure requires the secret `AZURE_STATIC_WEB_APPS_API_TOKEN_BLACK_GLACIER_0D8930410` for deployment.
 
-1. Open the folder in Visual Studio Code.
-
-1. In the VS Code terminal, run the following command to start the Static Web Apps CLI, along with the Blazor WebAssembly client application and the Functions API app:
-
-    ```bash
-    swa start http://localhost:5000 --run "dotnet run --project Client/Client.csproj" --api-location Api
-    ```
-
-    The Static Web Apps CLI (`swa`) first starts the Blazor WebAssembly client application and connects to it at port 5000, and then starts the Functions API app.
-
-1. Open a browser and navigate to the Static Web Apps CLI's address at `http://localhost:4280`. You'll be able to access both the client application and the Functions API app in this single address. When you navigate to the "Fetch Data" page, you'll see the data returned by the Functions API app.
-
-1. Enter Ctrl-C to stop the Static Web Apps CLI.
-
-## Template Structure
-
-- **Client**: The Blazor WebAssembly sample application
-- **Api**: A C# Azure Functions API, which the Blazor application will call
-- **Shared**: A C# class library with a shared data model between the Blazor and Functions application
-- **ApiIsolated**: A C# Azure Functions API using the .NET isolated execution model, which the Blazor application will call. This version can be used instead of the in-process function app in `Api`.
-
-## Deploy to Azure Static Web Apps
-
-This application can be deployed to [Azure Static Web Apps](https://docs.microsoft.com/azure/static-web-apps), to learn how, check out [our quickstart guide](https://aka.ms/blazor-swa/quickstart).
+The separate `ApiIsolated` example remains in the solution for compatibility with the original repository structure; the deployed function code lives in `Api`.

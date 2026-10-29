@@ -1,53 +1,33 @@
-using System;
-using System.Linq;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Extensions.Logging;
-
+using System.Net;
 using BlazorApp.Shared;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 
-namespace BlazorApp.Api
+namespace BlazorApp.Api;
+
+public class WeatherForecastFunction
 {
-    public static class WeatherForecastFunction
+    [Function("WeatherForecast")]
+    public async Task<HttpResponseData> Run(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData request)
     {
-        private static string GetSummary(int temp)
+        var random = new Random();
+        var forecast = Enumerable.Range(1, 5).Select(day =>
         {
-            var summary = "Mild";
-
-            if (temp >= 32)
+            var temperature = random.Next(-20, 55);
+            return new WeatherForecast
             {
-                summary = "Hot";
-            }
-            else if (temp <= 16 && temp > 0)
-            {
-                summary = "Cold";
-            }
-            else if (temp <= 0)
-            {
-                summary = "Freezing!";
-            }
+                Date = DateTime.Now.AddDays(day),
+                TemperatureC = temperature,
+                Summary = temperature >= 32 ? "Hot"
+                    : temperature > 0 && temperature <= 16 ? "Cold"
+                    : temperature <= 0 ? "Freezing!"
+                    : "Mild"
+            };
+        }).ToArray();
 
-            return summary;
-        }
-
-        [FunctionName("WeatherForecast")]
-        public static IActionResult Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequest req,
-            ILogger log)
-        {
-            var randomNumber = new Random();
-            var temp = 0;
-
-            var result = Enumerable.Range(1, 5).Select(index => new WeatherForecast
-            {
-                Date = DateTime.Now.AddDays(index),
-                TemperatureC = temp = randomNumber.Next(-20, 55),
-                Summary = GetSummary(temp)
-            }).ToArray();
-
-            return new OkObjectResult(result);
-        }
+        var response = request.CreateResponse(HttpStatusCode.OK);
+        await response.WriteAsJsonAsync(forecast);
+        return response;
     }
 }

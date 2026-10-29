@@ -3,8 +3,8 @@
 @using SkiaSharp.Views.Blazor
 
 <PageTitle>Dandelions</PageTitle>
-        <div class="border rounded p-2 canvas-container" @ref="testRef" tabindex="0" @onkeydown="HandleKeyDown">
-        <SKGLView OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="true" EnableTouchEvents="true" OnTouch="@OnTouched" />
+        <div class="border rounded p-2 canvas-container" @ref="testRef" tabindex="0" @onkeydown="HandleKeyDown" @onclick="OnTouched">
+        <SKGLView OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="true" />
         </div>
     <Field Horizontal="true" Size="Size.ExtraLarge">
         <FieldLabel ColumnSize="ColumnSize.Is2" Size="Size.ExtraLarge">

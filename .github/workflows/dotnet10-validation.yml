@@ -1,0 +1,44 @@
+name: .NET 10 build and browser smoke test
+on:
+  push:
+    branches: [upgrade/dotnet-10]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install WebAssembly build workload
+        run: dotnet workload install wasm-tools
+      - name: Restore
+        run: dotnet restore BlazorStaticWebApps.sln
+      - name: Build
+        run: dotnet build BlazorStaticWebApps.sln --configuration Release --no-restore
+      - name: Publish Blazor app
+        run: dotnet publish Client/Client.csproj -c Release --no-restore -o artifacts/client
+      - name: Publish API
+        run: dotnet publish Api/Api.csproj -c Release --no-restore -o artifacts/api
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install Playwright
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Browser smoke test
+        run: npx playwright test --project=chromium
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dandelions-playwright-report
+          path: pw-report/
+          retention-days: 7
