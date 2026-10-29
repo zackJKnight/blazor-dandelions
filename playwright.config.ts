@@ -13,6 +13,7 @@ const config: PlaywrightTestConfig = {
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'mobile-chromium', use: { ...devices['Pixel 5'], browserName: 'chromium' } },
+    { name: 'mobile-webkit', use: { ...devices['iPhone 13'], browserName: 'webkit' } },
   ],
   reporter: [['list'], ['html', { outputFolder: 'pw-report', open: 'never' }]],
   webServer: {
