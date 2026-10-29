@@ -30,6 +30,10 @@
         {
             <span class="canvas-hint" aria-hidden="true">Tap drawing to add 10</span>
         }
+        @if (gpuReady)
+        {
+            <span class="gpu-label" aria-label="GPU renderer active">WebGL2 GPU</span>
+        }
         <output id="fps-display" class="fps-indicator" aria-label="Approximate frame rate" title="Browser animation frames per second; low is the minimum over recent samples">FPS @(hasFrameRateSample ? displayedFps.ToString() : "—")@if (hasFrameRateSample) { <text> · low @lowestRecentFps</text> }</output>
     </main>
 
@@ -108,6 +112,7 @@
     private int uploadedPointCount = -1;
     private int uploadedDandelionCount = -1;
     private bool hasTappedCanvas;
+    private bool gpuReady;
     private bool hasFrameRateSample;
     private int displayedFps;
     private int lowestRecentFps;
@@ -150,6 +155,8 @@
                 module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/dandelions-gpu.js");
                 dotNetRef = DotNetObjectReference.Create(this);
                 renderer = await module.InvokeAsync<IJSObjectReference>("createRenderer", canvasElement, dotNetRef);
+                gpuReady = true;
+                await InvokeAsync(StateHasChanged);
             }
 
             if (renderer is not null &&
@@ -171,6 +178,7 @@
         }
         catch (Exception exception) when (exception is JSException or InvalidOperationException)
         {
+            gpuReady = false;
             gpuError = $"GPU initialization failed: {exception.Message}";
             await InvokeAsync(StateHasChanged);
         }

@@ -67,6 +67,19 @@ button:focus-visible,
     user-select: none;
 }
 /* Informational overlay does not intercept taps or keyboard focus. */
+.gpu-label {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    padding: 5px 9px;
+    border: 1px solid rgba(189, 224, 215, 0.4);
+    border-radius: 20px;
+    color: #c8ffe6;
+    background: rgba(13, 34, 35, 0.78);
+    pointer-events: none;
+    font-size: 0.76rem;
+    font-weight: 600;
+}
 .fps-indicator {
     position: absolute;
     top: 10px;
