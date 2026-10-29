@@ -2,6 +2,7 @@
 @using SkiaSharp
 @using SkiaSharp.Views.Blazor
 @using System.Diagnostics
+@implements IDisposable
 
 <PageTitle>Dandelions</PageTitle>
 
@@ -101,8 +102,10 @@
     float pointScale = 30.0f;
     float hCenter;
     float vCenter;
-    List<float[]> points = new List<float[]>();
+    SKPoint[] localPoints = Array.Empty<SKPoint>();
     List<Dandelion> dandelions = new List<Dandelion>();
+    // Allocate native Skia resources only after SKGLView has initialized Skia.
+    SKPaint? dotPaint;
     List<SKColor> colors = new List<SKColor>()
         {
             SKColors.YellowGreen,
@@ -135,7 +138,7 @@
     }
     void OnNumberOfDandiesChanged(int newDandyCount)
     {
-        if (dandelions.Count() < newDandyCount)
+        if (dandelions.Count < newDandyCount)
         {
             AddDandies((int)(newDandyCount - dandelions.Count()));
         }
@@ -146,13 +149,12 @@
     }
     void AddDandies(int numberToAdd)
     {
-        for (float i = 0; i < numberToAdd; i++)
+        for (int i = 0; i < numberToAdd; i++)
         {
 
             dandelions.Add(new Dandelion()
             {
-                points = new SKPoint[numberOfPoints],
-                color = colors.ElementAt(random.Next(colors.Count())),
+                color = colors[random.Next(colors.Count)],
                 moveX = random.Next(-((int)hCenter), ((int)hCenter)),
                 moveY = random.Next(-((int)vCenter), ((int)vCenter)),
                 moveSpeed = moveSpeed,
@@ -164,74 +166,44 @@
 
     void OnPaintSurface(SKPaintGLSurfaceEventArgs e)
     {
-        //if prevTickNumberOfPoints not equal numberOfPoints, clear points. otherwise leave them?????
-        if(previousTickNumberOfPoints != numberOfPoints)
+        // Golden-angle geometry is shared by every dandelion, and only changes
+        // when the points-per-dandelion control changes.
+        if (previousTickNumberOfPoints != numberOfPoints)
         {
-            points.Clear();
-            FillCircleWithPoints(numberOfPoints, alpha);
+            RebuildLocalPoints(numberOfPoints, alpha);
             previousTickNumberOfPoints = numberOfPoints;
-            for (int i = 0; i < dandelions.Count(); i++)
-            {
-                dandelions.ElementAt(i).points = new SKPoint[numberOfPoints];
-            }
-        }
-        
-                // the the canvas and properties
-        SKCanvas canvas = e.Surface.Canvas;
-        var surfaceSize = e.Info.Size;
-
-        hCenter = (surfaceSize.Width / 2f);
-        vCenter = (surfaceSize.Height / 2f);
-        if (!dandelions.Any())
-        {
-            AddDandies(numberOfDandies);
         }
 
-        OnNumberOfDandiesChanged(numberOfDandies);
-        SampleFrameRate();
-
-        // make sure the canvas is blank
-        canvas.Clear(SKColors.DarkSlateGray);
-        // Background and moving dandelions
-        using var paint = new SKPaint
+        var canvas = e.Surface.Canvas;
+        var paint = dotPaint ??= new SKPaint
         {
             IsAntialias = true,
             StrokeWidth = 3f,
             StrokeCap = SKStrokeCap.Round,
-            TextAlign = SKTextAlign.Center,
-            TextSize = 24,
-            Style = SKPaintStyle.Fill,
-
+            Style = SKPaintStyle.Stroke
         };
+        var surfaceSize = e.Info.Size;
+        hCenter = surfaceSize.Width / 2f;
+        vCenter = surfaceSize.Height / 2f;
 
-        // Region
-        paint.Style = SKPaintStyle.Stroke;
+        OnNumberOfDandiesChanged(numberOfDandies);
+        SampleFrameRate();
+        canvas.Clear(SKColors.DarkSlateGray);
 
-        for (float i = 0; i < numberOfDandies; i++)
+        for (int i = 0; i < dandelions.Count; i++)
         {
-            var dandy = dandelions.ElementAt((int)i);
-            dandy.moveSpeed = (int)i <= topSpeed ? (int)i + 1 : (int) i% topSpeed + 1;
-            // higher the x and y, the more right and down
+            var dandy = dandelions[i];
+            dandy.moveSpeed = i <= topSpeed ? i + 1 : i % topSpeed + 1;
             dandy.Update(hCenter, vCenter, pointScale);
 
-            for (int j = 0; j < points.Count(); j ++)
-            {
-                dandy.points[j].X = (points[j][0] * pointScale) + hCenter + dandy.moveX;
-                dandy.points[j].Y = (points[j][1] * pointScale) + vCenter + dandy.moveY;
-            }
-        }
-
-        dandelions.ForEach((dandy) =>
-        {
+            // Apply movement once per flower rather than rewriting all its
+            // point positions on every render callback.
             paint.Color = dandy.color;
-            canvas.DrawPoints(
-            SKPointMode.Points,
-            dandy.points,
-            paint);
-        });
-
-        paint.Style = SKPaintStyle.Fill;
-
+            canvas.Save();
+            canvas.Translate(hCenter + dandy.moveX, vCenter + dandy.moveY);
+            canvas.DrawPoints(SKPointMode.Points, localPoints, paint);
+            canvas.Restore();
+        }
     }
 
     void SampleFrameRate()
@@ -282,19 +254,21 @@
         return r;
     }
 
-    void FillCircleWithPoints(int n, int alpha)
+    void RebuildLocalPoints(int n, int alpha)
     {
-        double boundaryPointCount = Math.Round(alpha * Math.Sqrt(n)); // % number of boundary points
+        var circle = new SKPoint[n];
+        double boundaryPointCount = Math.Round(alpha * Math.Sqrt(n));
+
         for (int k = 1; k <= n; k++)
         {
-            double r = GetRadius(k, n, boundaryPointCount);
-            var theta = 2 * Math.PI * k / Math.Pow(GoldenRatio, 2);
-
-            float x = (float)(r * Math.Cos(theta));
-            float y = (float)(r * Math.Sin(theta));
-            points.Add(new[] { x, y });
+            double radius = GetRadius(k, n, boundaryPointCount);
+            double theta = 2 * Math.PI * k / Math.Pow(GoldenRatio, 2);
+            circle[k - 1] = new SKPoint(
+                (float)(radius * Math.Cos(theta) * pointScale),
+                (float)(radius * Math.Sin(theta) * pointScale));
         }
 
+        localPoints = circle;
     }
 
     private void HandleKeyDown(KeyboardEventArgs e)
@@ -306,4 +280,9 @@
         else if (e.Key == "Enter")
             ChangeDandelions(10);
     }
+    public void Dispose()
+    {
+        dotPaint?.Dispose();
+    }
+
 }
