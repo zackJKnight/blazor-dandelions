@@ -19,7 +19,8 @@
         <PackageReference Include="Blazorise.Icons.FontAwesome" Version="1.1.3.1" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.13" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="7.0.0" PrivateAssets="all" />
-        <PackageReference Include="SkiaSharp.Views.Blazor" Version="3.119.4" />
+        <!-- .NET 10 compatible SkiaSharp view using async JS interop; avoids the undefined global Module issue. -->
+        <PackageReference Include="ModelingEvolution.SkiaSharp.Views.Blazor" Version="1.6.5" />
     </ItemGroup>
     <ItemGroup>
       <ProjectReference Include="..\Shared\Shared.csproj" />
