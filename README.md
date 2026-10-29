@@ -25,11 +25,11 @@ dotnet build BlazorStaticWebApps.sln -c Release
 dotnet publish Client/Client.csproj -c Release -o artifacts/client
 dotnet publish Api/Api.csproj -c Release -o artifacts/api
 npm ci
-npx playwright install chromium
-npx playwright test --project=chromium
+npx playwright install chromium webkit
+npx playwright test
 ```
 
-The `.github/workflows/dotnet10-validation.yml` workflow builds both projects and runs Chromium smoke tests on the upgrade branch and pull requests.
+The `.github/workflows/dotnet10-validation.yml` workflow builds both projects and runs desktop Chromium, mobile Chromium, and mobile WebKit smoke tests on pull requests.
 
 ## Azure Static Web Apps
 

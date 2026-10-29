@@ -32,9 +32,9 @@ jobs:
       - name: Install Playwright
         run: |
           npm ci
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium webkit
       - name: Browser smoke test
-        run: npx playwright test --project=chromium
+        run: npx playwright test
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@v4

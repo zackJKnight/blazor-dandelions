@@ -1,42 +1,81 @@
-﻿@page "/"
+@page "/"
 @using SkiaSharp
 @using SkiaSharp.Views.Blazor
 
 <PageTitle>Dandelions</PageTitle>
-        <div class="border rounded p-2 canvas-container" @ref="testRef" tabindex="0" @onkeydown="HandleKeyDown" @onclick="OnTouched">
+
+<div class="dandelions-app">
+    <header class="app-header">
+        <h1>Dandelions</h1>
+        <output id="total-points" class="total-count" aria-live="polite">@TotalPoints.ToString("N0") points</output>
+    </header>
+
+    <main id="drawing-surface"
+          class="canvas-container"
+          role="button"
+          tabindex="0"
+          aria-label="Animated drawing. Tap to add ten dandelions. Use arrow keys to adjust the count."
+          @onclick="OnTouched"
+          @onkeydown="HandleKeyDown">
         <SKGLView OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="true" />
+        <span class="canvas-hint" aria-hidden="true">Tap drawing to add 10</span>
+    </main>
+
+    <section class="controls-panel" aria-label="Drawing controls">
+        <div class="points-heading">
+            <label for="points-slider">Points per dandelion</label>
+            <output id="points-value" for="points-slider">@numberOfPoints</output>
         </div>
-    <Field Horizontal="true" Size="Size.ExtraLarge">
-        <FieldLabel ColumnSize="ColumnSize.Is2" Size="Size.ExtraLarge">
-            Points
-        </FieldLabel>
-        <FieldBody ColumnSize="ColumnSize.Is10" Size="Size.ExtraLarge">
-            <Slider class="align-middle" @bind-Value="@numberOfPoints" Min="1" Max="500" Step="10" Size="Size.ExtraLarge" />
-        </FieldBody>
-    </Field>
-    <Row>
-        <Column ColumnSize="ColumnSize.Is3">
-            <NumericPicker Size="Size.ExtraLarge" @bind-Value="@numberOfDandies" Min="1" Max="500" Step="10" />
-        </Column>
-        <Column ColumnSize="ColumnSize.Is3">
-            <Field><FieldLabel>@totalPoints</FieldLabel></Field>
-        </Column>
-        <Column ColumnSize="ColumnSize.Is2">
-            <Button Border="Border.Is1" Clicked="@OnClear" Size="Size.ExtraLarge" id="clear-button">Clear </Button>
-        </Column>
-    </Row>
-    <a href="https://github.com/zackJKnight/blazor-dandelions">See the Code</a>
+        <input id="points-slider"
+               class="points-slider"
+               type="range"
+               min="5"
+               max="500"
+               step="5"
+               @bind="numberOfPoints"
+               @bind:event="oninput" />
+
+        <div class="count-actions">
+            <div class="count-editor">
+                <span class="count-label">Dandelions</span>
+                <div class="count-stepper" role="group" aria-label="Dandelion count">
+                    <button id="remove-one" class="stepper-button" type="button"
+                            aria-label="Remove one dandelion"
+                            disabled="@(numberOfDandies == 0)"
+                            @onclick="() => ChangeDandelions(-1)">−</button>
+                    <output id="dandelion-count" aria-live="polite">@numberOfDandies</output>
+                    <button id="add-one" class="stepper-button" type="button"
+                            aria-label="Add one dandelion"
+                            disabled="@(numberOfDandies == 500)"
+                            @onclick="() => ChangeDandelions(1)">+</button>
+                </div>
+            </div>
+            <div class="quick-actions">
+                <button id="add-ten" class="secondary-button" type="button"
+                        disabled="@(numberOfDandies == 500)"
+                        @onclick="() => ChangeDandelions(10)">+10</button>
+                <button id="clear-button" class="clear-button" type="button"
+                        disabled="@(numberOfDandies == 0)"
+                        @onclick="OnClear">Clear</button>
+            </div>
+        </div>
+    </section>
+    <footer class="app-footer">
+        <span>Move with arrow keys on desktop</span>
+        <a href="https://github.com/zackJKnight/blazor-dandelions">See the Code</a>
+    </footer>
+</div>
 
 @code
 {
-    string totalPoints = "";
+    int TotalPoints => numberOfPoints * numberOfDandies;
     int tickIndex = 0;
     long tickSum = 0;
     long[] tickList = new long[100];
     long lastTick = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     double GoldenRatio = 1.61803398874989484820458683436;
     int numberOfPoints = 20;
-    int previousTickNumberOfPoints = 20;
+    int previousTickNumberOfPoints = -1;
     int numberOfDandies = 1;
     int alpha = 0;
     Random random = new Random();
@@ -68,9 +107,10 @@
             SKColors.Navy,
             SKColors.Lime
         };
-    void OnTouched()
+    void OnTouched() => ChangeDandelions(10);
+    void ChangeDandelions(int change)
     {
-        numberOfDandies += 10;
+        numberOfDandies = Math.Clamp(numberOfDandies + change, 0, 500);
     }
     void OnClear()
     {
@@ -79,7 +119,6 @@
     }
     void OnNumberOfDandiesChanged(int newDandyCount)
     {
-        totalPoints = $"Total: {numberOfPoints * newDandyCount}";
         if (dandelions.Count() < newDandyCount)
         {
             AddDandies((int)(newDandyCount - dandelions.Count()));
@@ -121,7 +160,6 @@
             }
         }
         
-        totalPoints = $"Total: {numberOfPoints * numberOfDandies}";
                 // the the canvas and properties
         SKCanvas canvas = e.Surface.Canvas;
         var surfaceSize = e.Info.Size;
@@ -232,7 +270,7 @@
     void FillCircleWithPoints(int n, int alpha)
     {
         double boundaryPointCount = Math.Round(alpha * Math.Sqrt(n)); // % number of boundary points
-        for (int k = 1; k < n; k++)
+        for (int k = 1; k <= n; k++)
         {
             double r = GetRadius(k, n, boundaryPointCount);
             var theta = 2 * Math.PI * k / Math.Pow(GoldenRatio, 2);
@@ -244,31 +282,13 @@
 
     }
 
-    private ElementReference testRef;
-    private string? pressedKey;
-
     private void HandleKeyDown(KeyboardEventArgs e)
     {
-        pressedKey = e.Key;
-
-        if (pressedKey == "ArrowRight")
-        {
-            numberOfDandies = numberOfDandies + 1;
-        }
-        if (pressedKey == "ArrowLeft")
-        {
-            if (numberOfDandies > 0)
-            {
-                numberOfDandies = numberOfDandies - 1;
-            }
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await testRef.FocusAsync();
-        }
+        if (e.Key == "ArrowRight")
+            ChangeDandelions(1);
+        else if (e.Key == "ArrowLeft")
+            ChangeDandelions(-1);
+        else if (e.Key == "Enter")
+            ChangeDandelions(10);
     }
 }
