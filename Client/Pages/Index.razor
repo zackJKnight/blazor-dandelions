@@ -22,7 +22,7 @@
           aria-label="Animated drawing. Tap to add ten dandelions. Use arrow keys to adjust the count."
           @onclick="OnTouched"
           @onkeydown="HandleKeyDown">
-        <SKGLView OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="true" />
+        <SKCanvasView OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="true" />
         @if (!hasTappedCanvas)
         {
             <span class="canvas-hint" aria-hidden="true">Tap drawing to add 10</span>
@@ -176,7 +176,7 @@
         }
     }
 
-    void OnPaintSurface(SKPaintGLSurfaceEventArgs e)
+    void OnPaintSurface(SKPaintSurfaceEventArgs e)
     {
         var timestamp = Stopwatch.GetTimestamp();
         // At 60 FPS a moveSpeed of 1 still means 1 pixel per frame.
