@@ -43,7 +43,15 @@
                             aria-label="Remove one dandelion"
                             disabled="@(numberOfDandies == 0)"
                             @onclick="() => ChangeDandelions(-1)">−</button>
-                    <output id="dandelion-count" aria-live="polite">@numberOfDandies</output>
+                    <input id="dandelion-count"
+                           class="count-input"
+                           type="number"
+                           inputmode="numeric"
+                           aria-label="Number of dandelions"
+                           min="0"
+                           max="500"
+                           step="1"
+                           @bind="DandelionCount" />
                     <button id="add-one" class="stepper-button" type="button"
                             aria-label="Add one dandelion"
                             disabled="@(numberOfDandies == 500)"
@@ -77,6 +85,11 @@
     int numberOfPoints = 20;
     int previousTickNumberOfPoints = -1;
     int numberOfDandies = 1;
+    int DandelionCount
+    {
+        get => numberOfDandies;
+        set => numberOfDandies = Math.Clamp(value, 0, 500);
+    }
     int alpha = 0;
     Random random = new Random();
 
