@@ -31,7 +31,7 @@ jobs:
           cache: npm
       - name: Install Playwright
         run: |
-          npm ci
+          npm install
           npx playwright install --with-deps chromium
       - name: Browser smoke test
         run: npx playwright test --project=chromium

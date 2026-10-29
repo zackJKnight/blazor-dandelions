@@ -24,7 +24,7 @@ dotnet workload install wasm-tools
 dotnet build BlazorStaticWebApps.sln -c Release
 dotnet publish Client/Client.csproj -c Release -o artifacts/client
 dotnet publish Api/Api.csproj -c Release -o artifacts/api
-npm ci
+npm install
 npx playwright install chromium
 npx playwright test --project=chromium
 ```
