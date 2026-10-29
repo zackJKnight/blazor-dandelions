@@ -9,7 +9,10 @@
 <div class="dandelions-app">
     <header class="app-header">
         <h1>Dandelions</h1>
-        <output id="total-points" class="total-count" aria-live="polite">@TotalPoints.ToString("N0") points</output>
+        <div class="header-meta">
+            <output id="total-points" class="total-count" aria-live="polite">@TotalPoints.ToString("N0") points</output>
+            <a class="code-link" href="https://github.com/zackJKnight/blazor-dandelions" aria-label="See the Code">Code</a>
+        </div>
     </header>
 
     <main id="drawing-surface"
@@ -20,27 +23,30 @@
           @onclick="OnTouched"
           @onkeydown="HandleKeyDown">
         <SKGLView OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="true" />
-        <span class="canvas-hint" aria-hidden="true">Tap drawing to add 10</span>
-        <output id="fps-display" class="fps-indicator" aria-label="Approximate frame rate" title="Smoothed render callbacks per second">FPS @(hasFrameRateSample ? displayedFps.ToString() : "—")</output>
+        @if (!hasTappedCanvas)
+        {
+            <span class="canvas-hint" aria-hidden="true">Tap drawing to add 10</span>
+        }
+        <output id="fps-display" class="fps-indicator" aria-label="Approximate frame rate" title="Smoothed render callbacks per second; low is the minimum over approximately the last eight seconds">FPS @(hasFrameRateSample ? displayedFps.ToString() : "—")@if (hasFrameRateSample) { <text> · low @lowestRecentFps</text> }</output>
     </main>
 
     <section class="controls-panel" aria-label="Drawing controls">
-        <div class="points-heading">
-            <label for="points-slider">Points per dandelion</label>
+        <div class="points-control">
+            <label for="points-slider">Points</label>
+            <input id="points-slider"
+                   class="points-slider"
+                   type="range"
+                   aria-label="Points per dandelion"
+                   min="5"
+                   max="500"
+                   step="5"
+                   @bind="numberOfPoints"
+                   @bind:event="oninput" />
             <output id="points-value" for="points-slider">@numberOfPoints</output>
         </div>
-        <input id="points-slider"
-               class="points-slider"
-               type="range"
-               min="5"
-               max="500"
-               step="5"
-               @bind="numberOfPoints"
-               @bind:event="oninput" />
-
         <div class="count-actions">
             <div class="count-editor">
-                <span class="count-label">Dandelions</span>
+                <span class="count-label">Count</span>
                 <div class="count-stepper" role="group" aria-label="Dandelion count">
                     <button id="remove-one" class="stepper-button" type="button"
                             aria-label="Remove one dandelion"
@@ -71,15 +77,17 @@
             </div>
         </div>
     </section>
-    <footer class="app-footer">
-        <span>Move with arrow keys on desktop</span>
-        <a href="https://github.com/zackJKnight/blazor-dandelions">See the Code</a>
-    </footer>
 </div>
 
 @code
 {
     int TotalPoints => numberOfPoints * numberOfDandies;
+    bool hasTappedCanvas;
+    long lastFrameTimestamp;
+    readonly int[] fpsSamples = new int[10];
+    int fpsSampleCount;
+    int fpsSampleIndex;
+    int lowestRecentFps;
     long fpsWindowStart;
     int framesInWindow;
     double smoothedFps;
@@ -126,7 +134,11 @@
             SKColors.Navy,
             SKColors.Lime
         };
-    void OnTouched() => ChangeDandelions(10);
+    void OnTouched()
+    {
+        hasTappedCanvas = true;
+        ChangeDandelions(10);
+    }
     void ChangeDandelions(int change)
     {
         numberOfDandies = Math.Clamp(numberOfDandies + change, 0, 500);
@@ -166,6 +178,13 @@
 
     void OnPaintSurface(SKPaintGLSurfaceEventArgs e)
     {
+        var timestamp = Stopwatch.GetTimestamp();
+        // At 60 FPS a moveSpeed of 1 still means 1 pixel per frame.
+        // Clamp long background-tab pauses so a resumed flower doesn't teleport.
+        float deltaSeconds = lastFrameTimestamp == 0 ? (1f / 60f)
+            : (float)Math.Clamp((timestamp - lastFrameTimestamp) / (double)Stopwatch.Frequency, 0.0, 0.1);
+        lastFrameTimestamp = timestamp;
+
         // Golden-angle geometry is shared by every dandelion, and only changes
         // when the points-per-dandelion control changes.
         if (previousTickNumberOfPoints != numberOfPoints)
@@ -187,14 +206,14 @@
         vCenter = surfaceSize.Height / 2f;
 
         OnNumberOfDandiesChanged(numberOfDandies);
-        SampleFrameRate();
+        SampleFrameRate(timestamp);
         canvas.Clear(SKColors.DarkSlateGray);
 
         for (int i = 0; i < dandelions.Count; i++)
         {
             var dandy = dandelions[i];
             dandy.moveSpeed = i <= topSpeed ? i + 1 : i % topSpeed + 1;
-            dandy.Update(hCenter, vCenter, pointScale);
+            dandy.Update(hCenter, vCenter, pointScale, deltaSeconds);
 
             // Apply movement once per flower rather than rewriting all its
             // point positions on every render callback.
@@ -206,10 +225,8 @@
         }
     }
 
-    void SampleFrameRate()
+    void SampleFrameRate(long now)
     {
-        // Stopwatch is monotonic, unlike wall-clock timestamps.
-        var now = Stopwatch.GetTimestamp();
         if (fpsWindowStart == 0)
         {
             fpsWindowStart = now;
@@ -229,9 +246,14 @@
         framesInWindow = 0;
 
         var rounded = (int)Math.Round(smoothedFps);
-        if (rounded != displayedFps)
+        fpsSamples[fpsSampleIndex] = (int)Math.Round(sample);
+        fpsSampleIndex = (fpsSampleIndex + 1) % fpsSamples.Length;
+        fpsSampleCount = Math.Min(fpsSampleCount + 1, fpsSamples.Length);
+        var low = fpsSamples.Take(fpsSampleCount).Min();
+        if (rounded != displayedFps || low != lowestRecentFps)
         {
             displayedFps = rounded;
+            lowestRecentFps = low;
             // The canvas still animates independently; render the overlay only
             // when the displayed integer changes (never on every paint callback).
             _ = InvokeAsync(StateHasChanged);

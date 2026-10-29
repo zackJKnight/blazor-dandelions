@@ -9,7 +9,7 @@ public class Dandelion
     public bool moveRight { get; set; } = true;
     public int moveSpeed { get; set; } = 1;
 
-    public void Update(float hCenter, float vCenter, float pointScale)
+    public void Update(float hCenter, float vCenter, float pointScale, float deltaSeconds)
     {
         if (moveX >= hCenter - pointScale
             || moveX <= (0 - (hCenter - pointScale)))
@@ -22,21 +22,24 @@ public class Dandelion
             moveUp = !moveUp;
         }
 
+        // Retain the original feel at 60 FPS while decoupling motion from render rate.
+        var distance = moveSpeed * (60f * deltaSeconds);
+
         if (moveRight)
         {
-            moveX = moveX + moveSpeed;
+            moveX += distance;
         }
         else
         {
-            moveX = moveX - moveSpeed;
+            moveX -= distance;
         }
         if (moveUp)
         {
-            moveY = moveY + moveSpeed;
+            moveY += distance;
         }
         else
         {
-            moveY = moveY - moveSpeed;
+            moveY -= distance;
         }
     }
 }

@@ -21,6 +21,8 @@ body.body {
     gap: 10px;
 }
 .app-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 38px; }
+.header-meta { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.code-link { color: #bdebe0; font-size: 0.82rem; white-space: nowrap; text-underline-offset: 2px; }
 .app-header h1 { margin: 0; font-size: clamp(1.2rem, 4.6vw, 1.8rem); font-weight: 650; line-height: 1.25; }
 .total-count { white-space: nowrap; color: #d7f0ea; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
 .canvas-container {
@@ -39,7 +41,7 @@ body.body {
 .canvas-container:focus-visible,
 button:focus-visible,
 .points-slider:focus-visible,
-.app-footer a:focus-visible { outline: 3px solid #a9f5dc; outline-offset: 2px; }
+.code-link:focus-visible { outline: 3px solid #a9f5dc; outline-offset: 2px; }
 .canvas-hint {
     position: absolute;
     top: 10px;
@@ -74,45 +76,45 @@ button:focus-visible,
 .controls-panel {
     flex: 0 0 auto;
     display: grid;
-    gap: 8px;
-    padding: 12px;
+    gap: 4px;
+    padding: 7px 9px;
     background: #234044;
     border: 1px solid #587a7b;
     border-radius: 12px;
 }
-.points-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-weight: 600; }
-.points-heading output { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.15rem; }
-.points-slider { display: block; width: 100%; height: 34px; margin: 0; cursor: pointer; accent-color: #a9f5dc; }
-.points-slider::-webkit-slider-thumb { cursor: pointer; }
-.count-actions { display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 10px; }
-.count-editor { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.count-label { font-weight: 600; }
-.count-stepper { display: flex; align-items: center; gap: 3px; }
+.points-control { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 10px; min-height: 37px; }
+.points-control label { font-size: 0.87rem; font-weight: 600; }
+.points-control output { font-variant-numeric: tabular-nums; min-width: 30px; text-align: end; font-weight: 700; }
+.points-slider { width: 100%; min-width: 0; height: 37px; margin: 0; accent-color: #a9f5dc; cursor: pointer; }
+.count-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.count-editor { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.count-label { font-size: 0.84rem; font-weight: 600; }
+.count-stepper { display: flex; align-items: center; flex-shrink: 0; gap: 3px; }
 .count-input {
-    width: 62px;
-    min-width: 62px;
-    height: 48px;
-    padding: 5px 4px;
+    width: 58px;
+    min-width: 58px;
+    height: 44px;
+    padding: 5px 3px;
     border: 1px solid #8dbcb5;
     border-radius: 8px;
     background: #192f32;
     color: #fff;
     text-align: center;
     font: inherit;
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     appearance: textfield;
 }
 .count-input::-webkit-inner-spin-button,
 .count-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-.quick-actions { display: flex; gap: 8px; }
+.quick-actions { display: flex; gap: 5px; flex-shrink: 0; }
 .stepper-button, .secondary-button, .clear-button {
-    min-width: 50px;
-    min-height: 48px;
-    padding: 8px 14px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 5px 10px;
     border: 1px solid #9dc7c1;
-    border-radius: 9px;
+    border-radius: 8px;
     background: #33595b;
     color: #fff;
     font: inherit;
@@ -120,33 +122,27 @@ button:focus-visible,
     touch-action: manipulation;
     cursor: pointer;
 }
-.stepper-button { font-size: 1.45rem; line-height: 1; }
+.stepper-button { font-size: 1.4rem; line-height: 1; }
 .secondary-button { background: #366a60; }
 .clear-button { background: #523e42; border-color: #d3a6ac; }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 button:not(:disabled):active { transform: translateY(1px); filter: brightness(1.12); }
-.app-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 0.8rem; color: #bed4d3; }
-.app-footer a { color: #bdebe0; text-decoration: underline; text-underline-offset: 2px; }
 @media (max-width: 600px) {
-    .dandelions-app { padding-left: 8px; padding-right: 8px; gap: 8px; }
-    .controls-panel { padding: 10px; }
-    .count-actions { align-items: center; }
-    .count-editor { gap: 8px; }
-    .count-label { font-size: 0.9rem; }
-    .stepper-button, .secondary-button, .clear-button { min-height: 48px; padding: 8px 12px; }
-    .app-footer > span { display: none; }
+    .dandelions-app { padding-left: 8px; padding-right: 8px; gap: 7px; }
+    .controls-panel { padding: 6px 7px; gap: 3px; }
+    .count-editor { gap: 5px; }
+    .count-stepper { gap: 2px; }
+    .quick-actions { gap: 4px; }
+    .stepper-button, .secondary-button, .clear-button { padding: 5px 8px; }
 }
-@media (max-width: 370px) {
-    .count-actions { display: grid; grid-template-columns: 1fr auto; align-items: end; }
-    .count-editor { gap: 3px; }
-    .count-input { width: 58px; min-width: 58px; }
-    .quick-actions { gap: 5px; }
-    .stepper-button, .secondary-button, .clear-button { min-width: 44px; padding: 8px 10px; }
+@media (max-width: 340px) {
+    .count-label { display: none; }
+    .count-input { width: 52px; min-width: 52px; }
+    .count-actions { gap: 4px; }
 }
 @media (max-height: 550px) {
-    .dandelions-app { min-height: 520px; }
-    .canvas-container { min-height: 170px; }
-    .controls-panel { gap: 4px; padding-top: 8px; padding-bottom: 8px; }
+    .dandelions-app { min-height: 500px; }
+    .canvas-container { min-height: 155px; }
 }
 #blazor-error-ui {
     display: none;
