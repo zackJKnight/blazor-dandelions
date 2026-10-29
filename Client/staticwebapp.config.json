@@ -1,5 +1,8 @@
 {
-    "navigationFallback": {
-        "rewrite": "/index.html"
-    }
+  "navigationFallback": {
+    "rewrite": "/index.html"
+  },
+  "platform": {
+    "apiRuntime": "dotnet-isolated:10.0"
+  }
 }

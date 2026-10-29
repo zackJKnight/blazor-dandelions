@@ -18,7 +18,7 @@ namespace ApiIsolated
         }
 
         [Function("WeatherForecast")]
-        public HttpResponseData Run([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
+        public async System.Threading.Tasks.Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
             var randomNumber = new Random();
             var temp = 0;
@@ -31,7 +31,7 @@ namespace ApiIsolated
             }).ToArray();
 
             var response = req.CreateResponse(HttpStatusCode.OK);
-            response.WriteAsJsonAsync(result);
+            await response.WriteAsJsonAsync(result);
 
             return response;
         }
