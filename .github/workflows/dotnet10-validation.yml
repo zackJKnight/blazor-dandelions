@@ -31,10 +31,8 @@ jobs:
           cache: npm
       - name: Install Playwright
         run: |
-          npm install
+          npm ci
           npx playwright install --with-deps chromium
-      - name: Export updated npm lockfile for repository sync
-        run: echo "LOCKFILE_B64=$(base64 -w0 package-lock.json)"
       - name: Browser smoke test
         run: npx playwright test --project=chromium
       - name: Upload Playwright report on failure
